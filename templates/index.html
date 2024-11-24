@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YT-Pro</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js" defer></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .hero-gradient {
+            background: linear-gradient(135deg, #FF0080 0%, #7928CA 50%, #4F46E5 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .format-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .format-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes shimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+            100% {
+                background-position: 1000px 0;
+            }
+        }
+        
+        .loading-gradient {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+        }
+
+        .download-btn {
+            transition: all 0.3s ease;
+            background-size: 200% auto;
+        }
+        
+        .download-btn:hover {
+            background-position: right center;
+        }
+    </style>
+</head>
+<body class="min-h-screen hero-gradient" x-data="downloadApp()">
+    <div class="relative overflow-hidden">
+        <!-- Decorative Elements -->
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-slow"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-slow"></div>
+        </div>
+
+        <div class="container mx-auto px-4 py-12 relative z-10">
+            <div class="max-w-4xl mx-auto">
+                <!-- Header Section -->
+                <div class="text-center mb-12">
+                    <div class="flex items-center justify-center mb-6">
+                        <i class="fas fa-cloud-download-alt text-6xl text-white"></i>
+                    </div>
+                    <h1 class="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
+                        YT Pro
+                    </h1>
+                    <p class="text-xl text-pink-100">Download videos and audio with just a few clicks</p>
+                </div>
+
+                <!-- Main Card -->
+                <div class="glass-card rounded-3xl shadow-2xl p-8">
+                    <!-- URL Input Section -->
+                    <div class="mb-8">
+                        <div class="relative" x-data="{ focused: false }">
+                            <label for="url" class="block text-lg font-medium text-gray-700 mb-3">
+                                Enter YouTube URL
+                            </label>
+                            <div class="relative flex items-center">
+                                <i class="fas fa-link absolute left-4 text-gray-400"></i>
+                                <input 
+                                    type="text" 
+                                    id="url" 
+                                    x-model="url"
+                                    @keyup.enter="checkVideo"
+                                    @focus="focused = true"
+                                    @blur="focused = false"
+                                    class="w-full pl-12 pr-4 py-4 text-lg border-2 rounded-xl transition duration-200"
+                                    :class="{'border-purple-500 ring-2 ring-purple-200': focused, 'border-gray-200': !focused}"
+                                    placeholder="https://www.youtube.com/watch?v=..."
+                                    :disabled="loading"
+                                >
+                                <button 
+                                    @click="checkVideo"
+                                    class="absolute right-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200"
+                                    :disabled="loading || !url"
+                                >
+                                    <span x-show="!loading">Check</span>
+                                    <span x-show="loading">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div x-show="error" 
+                         x-transition
+                         class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg flex items-center">
+                        <i class="fas fa-exclamation-circle mr-3"></i>
+                        <span x-text="error"></span>
+                    </div>
+
+                    <!-- Video Preview -->
+                    <template x-if="videoInfo">
+                        <div class="space-y-8" x-transition>
+                            <!-- Video Information Card -->
+                            <div class="p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
+                                <div class="flex flex-col md:flex-row gap-6">
+                                    <div class="relative group">
+                                        <img :src="videoInfo.thumbnail_url" 
+                                             class="w-full md:w-64 h-auto object-cover rounded-xl shadow-lg transition duration-300 group-hover:shadow-xl" 
+                                             alt="Video thumbnail">
+                                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition duration-300 rounded-xl"></div>
+                                    </div>
+                                    <div class="flex-1 space-y-4">
+                                        <h3 class="text-2xl font-semibold line-clamp-2" x-text="videoInfo.title"></h3>
+                                        <div class="space-y-3 text-gray-600">
+                                            <p class="flex items-center">
+                                                <i class="fas fa-user-circle mr-3"></i>
+                                                <span x-text="videoInfo.author"></span>
+                                            </p>
+                                            <p class="flex items-center">
+                                                <i class="fas fa-clock mr-3"></i>
+                                                <span x-text="formatDuration(videoInfo.length)"></span>
+                                            </p>
+                                            <p class="flex items-center">
+                                                <i class="fas fa-eye mr-3"></i>
+                                                <span x-text="formatViews(videoInfo.view_count)"></span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Format Selection -->
+                            <div class="space-y-6">
+                                <!-- Format Toggle -->
+                                <div class="flex justify-center space-x-4 p-2 bg-gray-100 rounded-xl">
+                                    <button 
+                                        @click="setType('video')"
+                                        class="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2"
+                                        :class="{'bg-white shadow-md text-purple-600': selectedType === 'video', 'text-gray-600 hover:bg-gray-50': selectedType !== 'video'}"
+                                    >
+                                        <i class="fas fa-video"></i>
+                                        <span>Video</span>
+                                    </button>
+                                    <button 
+                                        @click="setType('audio')"
+                                        class="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2"
+                                        :class="{'bg-white shadow-md text-purple-600': selectedType === 'audio', 'text-gray-600 hover:bg-gray-50': selectedType !== 'audio'}"
+                                    >
+                                        <i class="fas fa-music"></i>
+                                        <span>Audio</span>
+                                    </button>
+                                </div>
+
+                                <!-- Quality Options -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <template x-for="stream in filteredStreams" :key="stream.itag">
+                                        <div 
+                                            @click="selectFormat(stream)"
+                                            class="format-card p-4 rounded-xl cursor-pointer transition-all duration-300"
+                                            :class="{
+                                                'bg-purple-50 border-2 border-purple-500': isSelectedFormat(stream),
+                                                'bg-white border-2 border-gray-100 hover:border-purple-200': !isSelectedFormat(stream)
+                                            }"
+                                        >
+                                            <div class="flex items-center justify-between mb-2">
+                                                <div class="flex items-center space-x-2">
+                                                    <i class="fas" :class="stream.type === 'audio' ? 'fa-music text-blue-500' : 'fa-video text-purple-500'"></i>
+                                                    <span class="font-medium" x-text="stream.quality"></span>
+                                                </div>
+                                                <span class="text-sm text-gray-500" x-text="stream.size"></span>
+                                            </div>
+                                            <div class="flex items-center justify-between mt-2 text-sm">
+                                                <span class="text-gray-600" x-text="stream.format.toUpperCase()"></span>
+                                                <template x-if="stream.type === 'video'">
+                                                    <span class="text-gray-500" x-text="`${stream.fps}fps`"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Download Button -->
+                            <div class="flex justify-center mt-8">
+                                <button 
+                                    @click="downloadContent"
+                                    class="download-btn px-8 py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 text-white rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 flex items-center space-x-2"
+                                    :disabled="!selectedFormat || downloading"
+                                >
+                                    <template x-if="!downloading">
+                                        <div class="flex items-center space-x-2">
+                                            <i class="fas fa-download"></i>
+                                            <span>Download Now</span>
+                                        </div>
+                                    </template>
+                                    <template x-if="downloading">
+                                        <div class="flex items-center space-x-2">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <span>Processing...</span>
+                                        </div>
+                                    </template>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadApp() {
+            return {
+                url: '',
+                videoInfo: null,
+                error: null,
+                loading: false,
+                downloading: false,
+                selectedType: 'video',
+                selectedFormat: null,
+
+                get filteredStreams() {
+                    if (!this.videoInfo) return [];
+                    return this.videoInfo.streams[this.selectedType] || [];
+                },
+
+                setType(type) {
+                    this.selectedType = type;
+                    this.selectedFormat = null;
+                },
+
+                selectFormat(format) {
+                    this.selectedFormat = format;
+                },
+
+                isSelectedFormat(format) {
+                    return this.selectedFormat && this.selectedFormat.itag === format.itag;
+                },
+
+                async checkVideo() {
+                    if (!this.url) return;
+                    
+                    this.loading = true;
+                    this.error = null;
+                    this.videoInfo = null;
+                    this.selectedFormat = null;
+
+                    try {
+                        const response = await fetch('/api/video-info', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ url: this.url })
+                        });
+
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            this.videoInfo = data.data;
+                            this.selectedType = 'video';
+                        } else {
+                            this.error = data.error;
+                        }
+                    } catch (e) {
+                        this.error = 'Failed to fetch video information. Please try again.';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async downloadContent() {
+                    if (!this.videoInfo || !this.selectedFormat) return;
+
+                    this.downloading = true;
+                    this.error = null;
+
+                    try {
+                        const response = await fetch('/api/download', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                url: this.url,
+                                itag: this.selectedFormat.itag,
+                                type: this.selectedFormat.type
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            window.location.href = data.download_url;
+                        } else {
+                            this.error = data.error;
+                        }
+                    } catch (e) {
+    this.error = 'Download failed. Please try again.';
+} finally {
+    this.downloading = false;
+}
+},
+
+formatDuration(seconds) {
+const hours = Math.floor(seconds / 3600);
+const minutes = Math.floor((seconds % 3600) / 60);
+const remainingSeconds = seconds % 60;
+
+if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+}
+return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+},
+
+formatViews(views) {
+if (views >= 1000000) {
+    return `${(views / 1000000).toFixed(1)}M views`;
+} else if (views >= 1000) {
+    return `${(views / 1000).toFixed(1)}K views`;
+}
+return `${views} views`;
+},
+
+// Helper function to validate YouTube URL
+validateYouTubeUrl(url) {
+const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+return pattern.test(url);
+},
+
+// Show success notification
+showSuccessNotification() {
+const notification = document.createElement('div');
+notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-500 flex items-center';
+notification.innerHTML = `
+    <i class="fas fa-check-circle mr-2"></i>
+    <span>Download started successfully!</span>
+`;
+document.body.appendChild(notification);
+setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => notification.remove(), 500);
+}, 3000);
+},
+
+// Show error notification
+showErrorNotification(message) {
+const notification = document.createElement('div');
+notification.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-500 flex items-center';
+notification.innerHTML = `
+    <i class="fas fa-exclamation-circle mr-2"></i>
+    <span>${message}</span>
+`;
+document.body.appendChild(notification);
+setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => notification.remove(), 500);
+}, 3000);
+},
+
+// Initialize the app
+init() {
+// Check for URL in query params
+const urlParams = new URLSearchParams(window.location.search);
+const youtubeUrl = urlParams.get('url');
+if (youtubeUrl && this.validateYouTubeUrl(youtubeUrl)) {
+    this.url = youtubeUrl;
+    this.checkVideo();
+}
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + V to paste URL and check video
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        navigator.clipboard.readText().then(text => {
+            if (this.validateYouTubeUrl(text)) {
+                this.url = text;
+                this.checkVideo();
+            }
+        });
+    }
+    
+    // Escape to clear form
+    if (e.key === 'Escape') {
+        this.url = '';
+        this.videoInfo = null;
+        this.error = null;
+        this.selectedFormat = null;
+    }
+});
+}
+}
+}
+</script>
+
+<!-- Footer -->
+<footer class="text-center py-8 text-white/70">
+<p class="text-sm">Made with <i class="fas fa-heart text-pink-500"></i> for video enthusiasts</p>
+</footer>
+</body>
+</html>
