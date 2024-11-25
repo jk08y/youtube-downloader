@@ -21,7 +21,7 @@ cd youtube-downloader
 2. Install dependencies
 
 ```bash
-install -r requirements.txt
+pip install flask==3.0.3 pytubefix==8.2.0  werkzeug==3.1.1 python-dotenv==1.0.1
 ```
 
 3. Run the application
