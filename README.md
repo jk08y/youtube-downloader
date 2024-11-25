@@ -2,7 +2,7 @@
 
 A Flask-based YouTube video and audio downloader.
 
-![Demo](https://raw.githubusercontent.com/jk08y/yt-flask-py/refs/heads/main/demo/demo.gif)
+![Demo](https://raw.githubusercontent.com/jk08y/youtube-downloader/refs/heads/main/demo/demo_complete.gif)
 
 ## Features
 
